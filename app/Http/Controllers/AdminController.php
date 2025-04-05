@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Laporan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -70,5 +71,19 @@ class AdminController extends Controller
         } else {
             return response()->json(['error' => 'Kantin tidak ditemukan!'], 500);
         }
+    }
+
+    public function listMahasiswa(Request $request)
+    {
+        $mahasiswas = User::where('type', 1)->get();
+
+        return response($mahasiswas);
+    }
+
+    public function listLaporan(Request $request)
+    {
+        $laporans = Laporan::get();
+
+        return response($laporans);
     }
 }
