@@ -39,5 +39,5 @@ function sendMail($view_file_name, $data, $receiver_email, $subject, $cc_email_l
 
 function generateVerificationCode()
 {
-    return random_int(100000, 999999);
+    return random_int(1000, 9999);
 }

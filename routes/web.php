@@ -23,6 +23,8 @@ Route::middleware([ApiAuth::class])->prefix('api')->group(function () {
         Route::get('profil', [MahasiswaController::class, 'getProfil']);
         Route::get('kantin/get', [MahasiswaController::class, 'getKantin']);
         Route::get('kantin/makanan/get', [MahasiswaController::class, 'getMakananKantin']);
+        Route::get('kantin/makanan/random/get', [MahasiswaController::class, 'getMakananKantinRandomGet']);
+        Route::match(['get','post'], 'kantin/makanan/catatan/get', [MahasiswaController::class, 'getMakananKantinCatatan']);
         Route::post('makanan/draft/save', [MahasiswaController::class, 'saveDraftMakanan']);
         Route::post('checkout', [MahasiswaController::class, 'checkout']);
         Route::get('transaksi', [MahasiswaController::class, 'getTransaksi']);
@@ -34,6 +36,7 @@ Route::middleware([ApiAuth::class])->prefix('api')->group(function () {
         Route::get('makanan', [KantinController::class, 'list']);
         Route::post('makanan/add', [KantinController::class, 'add']);
         Route::post('makanan/edit', [KantinController::class, 'edit']);
+        Route::get('riwayat', [KantinController::class, 'listRiwayat']);
         Route::get('pesanan', [KantinController::class, 'listPesanan']);
         Route::post('pesanan/ubah', [KantinController::class, 'updatePesanan']);
         Route::post('pesanan/tolak', [KantinController::class, 'tolakPesanan']);

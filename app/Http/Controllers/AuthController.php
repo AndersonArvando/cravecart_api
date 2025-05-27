@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\UserOTP;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -55,7 +56,7 @@ class AuthController extends Controller
                 $subject = "[CraveCart] Login OTP Code";
                 sendMail("emails.login_otp", compact('user_otp'), $user_otp->email, $subject, []);
                 
-                return response()->json(['auth_key' => $user->auth_key], 200);
+                return response()->json(['email' => $user->email], 200);
             }
             return response()->json(['error' => 'Email atau Password salah!'], 500);
         }
@@ -64,16 +65,16 @@ class AuthController extends Controller
 
     public function login_otp(Request $request)
     {
-        $auth_key = $request->auth_key;
+        $email = $request->email;
         $otp = $request->otp;
 
-        $user = User::where('auth_key', $auth_key)->first();
+        $user = User::where('email', $email)->first();
         if($user) {
             $user_otp = UserOTP::where('email', $user->email)->first();
             if($user_otp) {
                 if($user_otp->otp_code == $otp) {
                     $user_otp->delete();
-                    return response()->json(['auth_key' => $user->auth_key], 200);
+                    return response()->json(['user' => $user], 200);
                 } else {
                     return response()->json(['error' => 'OTP salah!'], 500);
                 }

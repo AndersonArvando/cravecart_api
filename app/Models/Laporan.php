@@ -11,4 +11,8 @@ class Laporan extends Model
     use SoftDeletes;
     
     protected $table = 'laporan';
+
+    public function transaksi(){
+        return $this->belongsTo(Transaksi::class, 'transaksi_id');
+    }
 }

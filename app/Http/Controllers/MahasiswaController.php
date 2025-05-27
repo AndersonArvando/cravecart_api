@@ -8,6 +8,7 @@ use App\Models\Transaksi;
 use App\Models\TransaksiDetail;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class MahasiswaController extends Controller
 {
@@ -24,20 +25,40 @@ class MahasiswaController extends Controller
     {
         $kantins = User::where('enable', 1)->where('type', 2)->get();
 
-        return response()->json(['kantins' => $kantins]);
+        return response()->json($kantins);
     }
 
     public function getMakananKantin(Request $request)
     {
         $mahasiswa = User::where('auth_key', $request->auth_key)->first();
-        $makanans = Makanan::where('kantin_id', $request->kantin_id)->where('enabled', 1)->where('is_ready', 1)->first();
+        $kantin = User::find($request->kantin_id);
+        $makanans = Makanan::where('kantin_id', $request->kantin_id)->where('enabled', 1)->where('is_ready', 1)->get();
         $draft_makanans = DraftMakanan::where('kantin_id', $request->kantin_id)->where('mahasiswa_id', $mahasiswa->id)->get();
 
-        return response()->json(['makanans' => $makanans, 'draft_makanans' => $draft_makanans]);
+        return response()->json(['makanans' => $makanans, 'draft_makanans' => $draft_makanans, 'kantin' => $kantin]);
+    }
+    public function getMakananKantinRandomGet(Request $request)
+    {
+        $makanans = Makanan::where('enabled', 1)->where('is_ready', 1)->get();
+
+        return response()->json(['makanans' => $makanans]);
+    }
+
+    public function getMakananKantinCatatan(Request $request)
+    {
+        $mahasiswa = User::where('auth_key', $request->auth_key)->first();
+        $draft_makanans = DraftMakanan::where('makanan_id', $request->makanan_id)->where('mahasiswa_id', $mahasiswa->id)->get();
+        if($request->isMethod('post')) {
+            $draft_makanans[0]->catatan = $request->catatan;
+            $draft_makanans[0]->save();
+        }
+
+        return response()->json(['draft_makanans' => $draft_makanans]);
     }
 
     public function saveDraftMakanan(Request $request)
     {
+        Log::info($request->all());
         $mahasiswa = User::where('auth_key', $request->auth_key)->first();
         $makanan = Makanan::find($request->makanan_id);
         $draft_makanan = DraftMakanan::where('mahasiswa_id', $mahasiswa->id)->where('makanan_id', $makanan->id)->first();
@@ -89,13 +110,13 @@ class MahasiswaController extends Controller
         $transaksi->metode = $request->metode;
         $transaksi->total = $total;
         $transaksi->kantin_id = $request->kantin_id;
-        $transaksi->mahasiswa = $mahasiswa->id;
+        $transaksi->mahasiswa_id = $mahasiswa->id;
         $transaksi->status = 'pending';
         if($request->file('payment_proof')) {
-            $file_name = $mahasiswa->npm . '_' . $new_no . '.' . $request->payment_proof->getClientMimeType();
+            $file_name = $mahasiswa->npm . '_' . $new_no . '.' . $request->payment_proof->extension();
             $request->payment_proof->move(public_path('/payment'), $file_name);
+            $transaksi->file_path = 'payment/' . $file_name;
         }
-        $transaksi->file_path = 'payment/' . $file_name;
         $transaksi->save();
 
         foreach ($draft_makanans as $draft_makanan) {
@@ -103,27 +124,30 @@ class MahasiswaController extends Controller
             $transaksi_detail->transaksi_id = $transaksi->id;
             $transaksi_detail->makanan_id = $draft_makanan->makanan_id;
             $transaksi_detail->qty = $draft_makanan->qty;
+            $transaksi_detail->catatan = $draft_makanan->catatan;
             $transaksi_detail->price = Makanan::where('id', $draft_makanan->makanan_id)->first()->price;
             $transaksi_detail->total = Makanan::where('id', $draft_makanan->makanan_id)->first()->price * $draft_makanan->qty;
             $transaksi_detail->save();
             $draft_makanan->delete();
         }
 
-        
-        return response()->json(['message' => 'Checkout Berhasil!']);
+        $transaksi = Transaksi::with(['detail', 'detail.makanan'])->find($transaksi->id);
+
+        return response()->json(['message' => 'Checkout Berhasil!', 'transaksi' => $transaksi]);
     }
 
     public function getTransaksi(Request $request)
     {
-        $transaksi_proses = Transaksi::where('status', '<>', 'selesai')->orderBy('created_at', 'desc')->get();
-        $transaksi_selesai = Transaksi::where('status', 'selesai')->orderBy('created_at', 'desc')->get();
+        $mahasiswa = User::where('auth_key', $request->auth_key)->first();
+        $transaksi_proses = Transaksi::with('kantin')->where('mahasiswa_id', $mahasiswa->id)->where('status', '<>', 'selesai')->orderBy('created_at', 'desc')->get();
+        $transaksi_selesai = Transaksi::with('kantin')->where('mahasiswa_id', $mahasiswa->id)->where('status', 'selesai')->orderBy('created_at', 'desc')->get();
         
         return response()->json(['transaksi_proses' => $transaksi_proses, 'transaksi_selesai' => $transaksi_selesai]);
     }
 
     public function getTransaksiDetail(Request $request)
     {
-        $transaksi = Transaksi::with('detail')->find($request->transaksi_id);
+        $transaksi = Transaksi::with(['detail', 'kantin', 'mahasiswa', 'detail.makanan'])->find($request->transaksi_id);
         
         return response()->json($transaksi);
     }

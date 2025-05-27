@@ -82,7 +82,7 @@ class AdminController extends Controller
 
     public function listLaporan(Request $request)
     {
-        $laporans = Laporan::get();
+        $laporans = Laporan::with('transaksi')->get();
 
         return response($laporans);
     }
